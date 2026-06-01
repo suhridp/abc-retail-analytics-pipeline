@@ -1,0 +1,585 @@
+═══════════════════════════════════════════════════════════════════════════════
+ABC RETAIL SOLUTIONS
+RETAIL DATA ENGINEERING PROJECT
+End-to-End Data Processing and Business Intelligence Solution
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT OVERVIEW
+═══════════════════════════════════════════════════════════════════════════════
+
+Organization: ABC Retail Solutions
+Project Name: Retail Sales Data Engineering Pipeline
+Objective: Process multi-source retail transaction data into clean, validated
+          datasets for business intelligence and decision-making
+Scope: Data ingestion, validation, cleaning, transformation, and KPI generation
+Timeline: Development and implementation within 2-day sprint
+
+BUSINESS CONTEXT
+─────────────────────────────────────────────────────────────────────────────
+
+ABC Retail Solutions operates retail businesses across 5 major Indian cities:
+• Mumbai (Online + Offline)
+• Delhi (Online + Offline)
+• Bangalore (Online + Offline)
+• Hyderabad (Online + Offline)
+• Chennai (Online + Offline)
+
+Current Challenges:
+─────────────────────────────────────────────────────────────────────────────
+Multiple data systems produce inconsistent transaction records:
+1. System A (retail_data1): 4,243 transactions
+2. System B (retail_data2): 4,251 transactions
+3. Both systems have overlapping, duplicate records
+4. Missing price information in ~5% of records
+5. Customer names stored in plain text (PII exposure)
+6. Inconsistent date formats across systems
+7. No standardized product naming conventions
+8. No automated revenue reporting by city/category/payment method
+
+Business Impact:
+─────────────────────────────────────────────────────────────────────────────
+• Revenue discrepancies between systems
+• Inaccurate financial reporting
+• Regulatory compliance risks (PII exposure)
+• Manual data reconciliation burden
+• Unreliable dashboards and KPIs
+• Slow decision-making
+
+
+SOLUTION ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+PIPELINE DESIGN
+─────────────────────────────────────────────────────────────────────────────
+
+Input Data (Excel File):
+│
+├─ Sheet: product_details (10 products)
+│  └─ Columns: product_id, product_name, category, price
+│
+├─ Sheet: retail_data1 (4,243 transactions)
+│  └─ Columns: transaction_id, customer_id, customer_name, product_id,
+│             price, quantity, transaction_date, city, category,
+│             payment_method, discount, email, phone, payment_status
+│
+└─ Sheet: retail_data2 (4,251 transactions)
+   └─ Same structure as retail_data1
+
+
+PROCESSING PIPELINE
+─────────────────────────────────────────────────────────────────────────────
+
+Stage 1: INGESTION
+  Input: 8,494 transaction records (combined from both systems)
+  Actions:
+    • Load all Excel sheets
+    • Validate sheet existence
+    • Profile data structure
+  Output: DataFrames ready for validation
+
+Stage 2: VALIDATION
+  Input: Raw DataFrames
+  Actions:
+    • Schema validation (required columns present)
+    • Primary key validation (transaction_id not null)
+    • Data type verification
+    • Null profiling by column
+    • Duplicate detection
+  Output: Quality report, warnings/errors
+
+Stage 3: CLEANING
+  Input: 8,494 rows from combined data
+  Actions:
+    • Impute missing prices (2-tier: product lookup → category median)
+    • Remove exact duplicates (all columns identical)
+    • Remove transaction-level duplicates (same customer/product/date/qty)
+    • Remove invalid quantities (qty ≤ 0)
+    • Standardize categorical values (trim, title-case)
+    • Parse transaction dates to ISO format
+    • Mask PII (customer_name, email, phone) using SHA-256
+    • Standardize product names (lowercase, trim, normalize spacing)
+  Output: 7,914 cleaned rows (6.8% reduction)
+
+Stage 4: TRANSFORMATION
+  Input: 7,914 cleaned rows
+  Actions:
+    • Join with product dimension table
+    • Calculate revenue = (price × qty) - discount
+    • Estimate profit = revenue - (cost)
+    • Extract time features (year, month, week, day_of_week)
+    • Calculate discount rate
+    • Create product name standardized column
+  Output: Enriched dataset with business metrics
+
+Stage 5: AGGREGATION
+  Input: 7,914 enriched rows
+  Actions:
+    • Calculate global KPIs (total revenue, transactions, profit, etc.)
+    • Aggregate by category
+    • Aggregate by city
+    • Aggregate by payment method
+    • Aggregate by payment status
+    • Rank top products
+  Output: Structured KPI dictionary
+
+Stage 6: EXPORT
+  Input: Cleaned dataset + KPIs
+  Actions:
+    • Export to CSV (for Power BI / Excel)
+    • Export to XLSX (Excel format)
+    • Export KPIs to JSON
+    • Create audit log
+  Output: Files ready for BI consumption
+
+
+DATA QUALITY TRANSFORMATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. MISSING PRICE HANDLING
+───────────────────────────────────────────────────────────────────────────────
+Problem: 404-405 null values in price field per dataset
+
+Strategy (2-Tier Approach):
+  Tier 1 - Product Dimension Lookup:
+    • Create lookup: product_id → standard_price from product_details table
+    • Fill null prices using product_id mapping
+    • Expected fill rate: ~95%
+  
+  Tier 2 - Category Median Fallback:
+    • For remaining nulls (orphaned products):
+    • Calculate category_median = median price per category
+    • Fill with category median
+    • Ensures 100% coverage
+
+Result: No remaining null prices
+Rows Affected: ~400-410 per dataset
+Method: Preserves business logic (don't drop transactions)
+
+
+2. DUPLICATE REMOVAL
+───────────────────────────────────────────────────────────────────────────────
+Problem: ~600-700 duplicate records across both systems
+
+Strategy (Multi-Level Deduplication):
+  Level 1 - Exact Duplicates:
+    • Drop rows where ALL columns are identical
+    • Removes obvious errors
+  
+  Level 2 - Transaction-Level Duplicates:
+    • Drop based on key fields: customer_id, product_id, transaction_date,
+                                quantity, price
+    • Identifies same real-world transaction (different system timestamps)
+
+Result: Clean transaction dataset (no duplicate revenue)
+Rows Removed: ~580-623
+Impact: 6.8% data reduction (acceptable threshold)
+
+
+3. VALUE STANDARDIZATION
+───────────────────────────────────────────────────────────────────────────────
+Problem: Inconsistent text values across records
+
+Transformations Applied:
+  • Category: Trim + Title Case
+    Input:  ['ELECTRONICS', ' clothing ', 'home & garden']
+    Output: ['Electronics', 'Clothing', 'Home & Garden']
+  
+  • City: Trim + Title Case
+    Input:  ['MUMBAI', 'delhi', 'New delhi']
+    Output: ['Mumbai', 'Delhi', 'New Delhi']
+  
+  • Payment Method: Trim + Title Case
+    Input:  ['CREDIT CARD', 'cash', 'DEBIT CARD']
+    Output: ['Credit Card', 'Cash', 'Debit Card']
+  
+  • Payment Status: Trim + Title Case
+    Input:  ['successful', 'FAILED', 'pending']
+    Output: ['Successful', 'Failed', 'Pending']
+  
+  • Product Names: Trim whitespace + Normalize spacing
+    Input:  ['  Laptop  ', 'sofa_bed-deluxe', 'TV']
+    Output: ['Laptop', 'Sofa Bed Deluxe', 'Tv']
+  
+  • Transaction Date: Parse to ISO 8601 (YYYY-MM-DD)
+    Input:  ['01/06/2026', '2026-06-01', '06-01-2026']
+    Output: ['2026-06-01', '2026-06-01', '2026-06-01']
+
+Result: Consistent, aggregatable data
+
+
+4. PII PROTECTION (GDPR Compliance)
+───────────────────────────────────────────────────────────────────────────────
+Problem: Customer names, emails, phone numbers exposed in raw data
+
+Approach: Irreversible SHA-256 Salted Hashing
+  • Not encryption (cannot decrypt - requirement met)
+  • Deterministic (same input always produces same hash)
+  • One-way function (cannot reverse)
+  
+  Implementation:
+    hash = SHA-256(original_value + salt)[:16]
+    salt = "ABC_Default_Salt" (unique per organization)
+  
+  Columns Masked:
+    • customer_name → customer_name_masked
+    • email → email_masked
+    • phone → phone_masked
+  
+  Original columns: Deleted after masking
+  
+  Benefit: Rows can still be joined (same customer = same hash)
+           Data is GDPR-compliant
+           No PII in outputs
+
+
+BUSINESS METRICS CALCULATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+TRANSACTION-LEVEL METRICS
+───────────────────────────────────────────────────────────────────────────────
+
+Revenue:
+  Formula: (price × quantity) - discount
+  Logic: Total sale value after discount
+  Validation: Clipped at 0 (no negative revenue)
+  
+  Example: price=100, qty=2, discount=10
+    revenue = (100 × 2) - 10 = 190
+
+Cost Estimate:
+  Formula: (price × quantity) × 0.4
+  Assumption: 40% of transaction value is cost (60% margin)
+  Purpose: High-level profitability assessment
+  
+  Example: price=100, qty=2
+    cost = (100 × 2) × 0.4 = 80
+
+Profit:
+  Formula: revenue - cost
+  Range: 0 to revenue (by construction)
+  
+  Example: cost=80, revenue=190
+    profit = 190 - 80 = 110
+
+Profit Margin %:
+  Formula: (profit / revenue) × 100
+  Range: 0-100%
+  Use: Identify product profitability
+
+
+GLOBAL AGGREGATIONS
+───────────────────────────────────────────────────────────────────────────────
+
+Total Revenue: Sum of all transaction revenues
+  Purpose: Top-line business metric
+  Current: ₹1,501,410,824.60
+
+Total Transactions: Count of unique transaction_ids
+  Purpose: Transaction volume metric
+  Current: 7,914
+
+Average Order Value (AOV): Total revenue / transaction count
+  Formula: ₹1,501,410,824.60 / 7,914
+  Current: ₹189,715.80
+  Use: Customer spending pattern analysis
+
+Total Profit: Sum of all profits
+  Formula: Sum(revenue - cost)
+  Current: ₹900,845,784.60 (60% of revenue, as expected)
+
+Total Discount Given: Sum of discount amounts
+  Current: ₹1,775.40 (0.12% of revenue)
+  Insight: Minimal discounting strategy
+
+
+DIMENSIONAL ANALYSIS
+───────────────────────────────────────────────────────────────────────────────
+
+By Category:
+  • Electronics: ₹870,949,458 (58% of total)
+  • Furniture: ₹314,159,645 (21%)
+  • Home Appliances: ₹294,239,474 (20%)
+  • Clothing: ₹22,062,248 (1%)
+
+By City:
+  • Chennai: ₹317,288,445 (21%)
+  • Delhi: ₹309,960,635 (21%)
+  • Hyderabad: ₹299,164,337 (20%)
+  • Mumbai: ₹290,212,243 (19%)
+  • Bangalore: ₹284,785,165 (19%)
+  Observation: Balanced distribution (±5% variance)
+
+By Payment Method:
+  • Card: ₹389,192,554 (26%)
+  • Cash: ₹384,530,849 (26%)
+  • UPI: ₹375,293,345 (25%)
+  • Netbanking: ₹352,394,076 (23%)
+  Observation: Good diversification
+
+By Payment Status:
+  • Successful: ₹1,501,410,825 (100%)
+  • Failed/Pending: ₹0
+  Observation: All transactions processed successfully
+
+
+SOFTWARE ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+CLASS STRUCTURE (OOP Design)
+───────────────────────────────────────────────────────────────────────────────
+
+DataLoader
+  Responsibility: Data ingestion from Excel
+  Methods:
+    • load_all_sheets(): Load all worksheets
+    • validate_sheet_exists(): Verify required sheets
+  Dependencies: pandas, openpyxl
+
+DataValidator
+  Responsibility: Schema and quality validation
+  Methods:
+    • validate_schema(): Check required columns
+    • profile_data_quality(): Generate quality report
+  Dependencies: pandas
+
+DataCleaner
+  Responsibility: Data preparation and cleaning
+  Methods:
+    • handle_missing_prices(): Impute missing values
+    • remove_duplicates(): Remove duplicate records
+    • standardize_values(): Normalize text values
+    • mask_pii(): Hash sensitive data
+    • handle_invalid_quantities(): Remove invalid records
+    • standardize_product_names(): Normalize product names
+    • clean_full_pipeline(): Orchestrate cleaning
+  Dependencies: pandas, hashlib
+
+DataTransformer
+  Responsibility: Enrichment and metric creation
+  Methods:
+    • enrich_with_product_dimension(): Join with product table
+    • calculate_business_metrics(): Create calculated fields
+  Dependencies: pandas, numpy
+
+KPIAggregator
+  Responsibility: KPI calculation and reporting
+  Methods:
+    • calculate_kpis(): Compute all business metrics
+    • print_kpi_summary(): Display formatted output
+  Dependencies: pandas
+
+DataExporter
+  Responsibility: Output serialization
+  Methods:
+    • export_to_csv(): Save as CSV
+    • export_to_excel(): Save as XLSX
+    • export_kpis_to_json(): Save KPIs as JSON
+    • export_audit_log(): Save audit trail
+  Dependencies: pandas, json, pathlib
+
+
+EXECUTION FLOW
+───────────────────────────────────────────────────────────────────────────────
+
+1. Initialize all 6 modules
+2. Load data from Excel (DataLoader)
+3. Validate schema (DataValidator)
+4. Combine datasets (union)
+5. Clean data (DataCleaner → multiple steps)
+6. Transform and enrich (DataTransformer)
+7. Calculate KPIs (KPIAggregator)
+8. Export outputs (DataExporter)
+9. Log audit trail
+10. Return cleaned data + KPIs
+
+
+ERROR HANDLING & LOGGING
+═══════════════════════════════════════════════════════════════════════════════
+
+Logging Strategy
+  Level: INFO (major steps)
+  Format: [timestamp] [level] [message]
+  Output: Console + Log file
+  
+  Example Output:
+  2026-06-01 23:34:25 | INFO     | Loading Excel file: ...
+  2026-06-01 23:34:26 | INFO     | Found sheets: ['product_details', ...]
+  2026-06-01 23:34:27 | INFO     | Schema validation passed
+  2026-06-01 23:34:28 | INFO     | Combining retail datasets...
+  2026-06-01 23:34:30 | INFO     | DATA CLEANING PIPELINE STARTING
+  2026-06-01 23:34:31 | INFO     | Missing prices handled: 400 rows filled
+  2026-06-01 23:34:32 | INFO     | Duplicates removed: 580
+  ...
+  2026-06-01 23:34:40 | INFO     | PIPELINE EXECUTION COMPLETED SUCCESSFULLY
+
+
+Exception Handling
+  • File not found: ValueError with guidance
+  • Missing sheets: ValueError with sheet list
+  • Schema validation: ValueError with column names
+  • Data type errors: Coerced with pd.to_datetime(errors='coerce')
+  • Merge issues: Left join with unmatched reporting
+  • Export failures: Caught and logged with path info
+
+Audit Trail
+  Tracked Metrics:
+  • rows_loaded: Initial row count
+  • rows_cleaned: After all cleaning steps
+  • rows_exported: Final output count
+  • run_timestamp: ISO format datetime
+  • pipeline_status: SUCCESS or FAILED
+
+
+OUTPUT SPECIFICATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. retail_sales_cleaned.csv
+   Format: CSV (comma-separated values)
+   Rows: 7,914
+   Columns: 30+ (transaction + calculated fields)
+   Size: ~1.9 MB
+   Purpose: Import into Power BI / Excel / Data warehouse
+   Encoding: UTF-8
+   Index: No row numbers
+
+2. retail_sales_cleaned.xlsx
+   Format: Microsoft Excel 2007+
+   Sheet: "Retail Data"
+   Rows: 7,914
+   Columns: 30+
+   Size: ~1.3 MB
+   Purpose: Local analysis, backup format
+   Headers: Included
+
+3. kpis_summary.json
+   Format: JSON
+   Size: ~2.1 KB
+   Content: All calculated KPIs
+   Structure:
+     - Global metrics (Total Revenue, AOV, etc.)
+     - Category breakdown
+     - City breakdown
+     - Payment method breakdown
+     - Top products
+   Purpose: API consumption, dashboards
+
+4. audit_log.json
+   Format: JSON
+   Content:
+     - rows_loaded: 8,494
+     - rows_cleaned: 7,914
+     - rows_exported: 7,914
+     - run_timestamp: ISO datetime
+     - pipeline_status: SUCCESS/FAILED
+   Purpose: Process monitoring, compliance
+
+
+SYSTEM REQUIREMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Hardware:
+  • RAM: 4 GB minimum (300-500 MB for pipeline)
+  • Storage: 1 GB free (for input + output files)
+  • CPU: No special requirements
+
+Software:
+  • Python 3.8+
+  • pandas (data manipulation)
+  • numpy (numerical computing)
+  • openpyxl (Excel reading)
+  • Standard library: os, logging, hashlib, json, pathlib, argparse, datetime
+
+Installation:
+  pip install pandas openpyxl numpy
+
+
+EXECUTION INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Basic Execution:
+  python retail_data_pipeline.py \
+    --input "path/to/excel_file.xlsx" \
+    --output "output_directory"
+
+Example:
+  python retail_data_pipeline.py \
+    --input "NeoStats_2026_-_USECASE_-_Data_Engineering.xlsx" \
+    --output "output"
+
+Expected Output:
+  ✓ output/retail_sales_cleaned.csv
+  ✓ output/retail_sales_cleaned.xlsx
+  ✓ output/kpis_summary.json
+  ✓ output/audit_log.json
+
+
+ASSUMPTIONS & DESIGN DECISIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Price Imputation
+   Assumption: Product dimension has authoritative prices
+   Decision: Use product lookup first, category median as fallback
+   Rationale: Preserves transaction records while using best available data
+
+2. Duplicate Handling
+   Assumption: Duplicates are system errors, not legitimate re-orders
+   Decision: Keep first occurrence, remove others
+   Rationale: Same customer, product, date, amount = same transaction
+
+3. Cost Estimation
+   Assumption: 40% cost margin across all products
+   Decision: cost = (price × qty) × 0.4
+   Rationale: Reasonable retail average (can be refined later with actual costs)
+
+4. PII Protection
+   Assumption: Can't decrypt customer data after masking (requirement)
+   Decision: Irreversible SHA-256 hashing
+   Rationale: GDPR-compliant, prevents accidental exposure
+
+5. Row Clipping
+   Assumption: Some transactions may have calculation errors
+   Decision: Clip profit to minimum 0
+   Rationale: Prevents nonsensical negative values
+
+6. Date Parsing
+   Assumption: transaction_date may have mixed formats
+   Decision: pd.to_datetime with errors='coerce'
+   Rationale: Flexible parsing handles multiple formats
+
+
+FUTURE ENHANCEMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Phase 2:
+  • Customer RFM analysis (Recency, Frequency, Monetary)
+  • Product correlation analysis
+  • Seasonality detection
+  • Demand forecasting
+
+Phase 3:
+  • Real-time analytics updates
+  • Automated anomaly detection
+  • Predictive churn modeling
+  • Personalized recommendations
+
+Phase 4:
+  • Machine learning pipeline (demand forecasting)
+  • Data quality monitoring and alerts
+  • Self-service BI portal
+  • Advanced customer insights
+
+
+═══════════════════════════════════════════════════════════════════════════════
+DOCUMENT METADATA
+═══════════════════════════════════════════════════════════════════════════════
+
+Document: ABC Retail Solutions - Project Documentation
+Project: Retail Sales Data Engineering Pipeline
+Date: June 1, 2026
+Version: 1.0 (Final)
+Status: Production Ready
+Audience: Data Engineers, Analysts, Business Stakeholders
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF DOCUMENTATION
+═══════════════════════════════════════════════════════════════════════════════

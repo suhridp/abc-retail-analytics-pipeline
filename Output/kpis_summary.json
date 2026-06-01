@@ -1,0 +1,85 @@
+{
+  "Total Revenue": 1501410824.6,
+  "Total Transactions": 7914,
+  "Total Quantity Sold": 23596,
+  "Average Order Value": 189715.79790245133,
+  "Total Discount Given": 1775.4,
+  "Total Profit": 900845784.6,
+  "Top Products by Revenue": {
+    "Laptop": 601749814.85,
+    "Sofa": 192959827.6,
+    "Phone": 164709823.25,
+    "Refrigerator": 151124832.7,
+    "Dining Table": 121199817.4,
+    "Microwave": 107774823.1,
+    "TV": 104489820.1,
+    "Mixer Grinder": 35339817.7,
+    "Shoes": 19199812.75,
+    "Shirt": 2862435.15
+  },
+  "Best Selling Products by Quantity": {
+    "Dining Table": 2424,
+    "Sofa": 2412,
+    "Laptop": 2407,
+    "Shoes": 2400,
+    "Microwave": 2395,
+    "Mixer Grinder": 2356,
+    "Phone": 2353,
+    "Refrigerator": 2325,
+    "TV": 2322,
+    "Shirt": 2202
+  },
+  "Most Profitable Products": {
+    "Laptop": 361049814.85,
+    "Sofa": 115775827.6,
+    "Phone": 98825823.25,
+    "Refrigerator": 90674832.7,
+    "Dining Table": 72719817.4,
+    "Microwave": 64664823.1,
+    "TV": 62693820.1,
+    "Mixer Grinder": 21203817.7,
+    "Shoes": 11519812.75,
+    "Shirt": 1717395.15
+  },
+  "Revenue by Category": {
+    "Clothing": 22062247.9,
+    "Electronics": 870949458.2,
+    "Furniture": 314159645.0,
+    "Home Appliances": 294239473.5
+  },
+  "Transactions by Category": {
+    "Clothing": 1565,
+    "Electronics": 2395,
+    "Furniture": 1581,
+    "Home Appliances": 2373
+  },
+  "Avg Price by Category": {
+    "Clothing": 4823.39,
+    "Electronics": 123766.18,
+    "Furniture": 65009.49,
+    "Home Appliances": 41203.12
+  },
+  "Revenue by City": {
+    "Bangalore": 284785164.75,
+    "Chennai": 317288445.15,
+    "Delhi": 309960634.95,
+    "Hyderabad": 299164336.5,
+    "Mumbai": 290212243.25
+  },
+  "Transactions by City": {
+    "Bangalore": 1448,
+    "Chennai": 1579,
+    "Delhi": 1636,
+    "Hyderabad": 1631,
+    "Mumbai": 1620
+  },
+  "Revenue by Payment Method": {
+    "Card": 389192554.25,
+    "Cash": 384530849.05,
+    "Netbanking": 352394075.9,
+    "Upi": 375293345.4
+  },
+  "Revenue by Payment Status": {
+    "Successful": 1501410824.6
+  }
+}
