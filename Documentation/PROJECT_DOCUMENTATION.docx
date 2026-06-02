@@ -526,11 +526,26 @@ ASSUMPTIONS & DESIGN DECISIONS
    Decision: Keep first occurrence, remove others
    Rationale: Same customer, product, date, amount = same transaction
 
-3. Cost Estimation
-   Assumption: 40% cost margin across all products
-   Decision: cost = (price × qty) × 0.4
-   Rationale: Reasonable retail average (can be refined later with actual costs)
+3. Cost Estimate:
 
+   The source dataset does not contain product cost information.
+
+   To enable profitability analysis, category-specific cost assumptions were applied.
+
+   Category Cost Assumptions:
+
+    Electronics      → 80% cost (20% margin)
+    Furniture        → 60% cost (40% margin)
+    Clothing         → 50% cost (50% margin)
+    Home Appliances  → 70% cost (30% margin)
+
+   Formula:
+
+    Cost = Price × Quantity × Category Cost Ratio
+
+    Profit = Revenue − Cost
+
+  These assumptions were used solely for analytical purposes and can be replaced with actual product cost data if available.
 4. PII Protection
    Assumption: Can't decrypt customer data after masking (requirement)
    Decision: Irreversible SHA-256 hashing

@@ -170,7 +170,16 @@ The dataset does not contain product cost information.
 For analytical purposes:
 
 ```text
-Cost = Transaction Value × 40%
+Profitability Analysis
+
+Since product cost information was not provided in the source data, category-specific cost assumptions were applied:
+
+Electronics      → 80% cost
+Furniture        → 60% cost
+Clothing         → 50% cost
+Home Appliances  → 70% cost
+
+This allows profitability analysis while maintaining realistic retail margin differences across categories.
 ```
 
 ### Profit

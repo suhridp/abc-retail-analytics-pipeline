@@ -4,7 +4,7 @@
   "Total Quantity Sold": 23596,
   "Average Order Value": 189715.79790245133,
   "Total Discount Given": 1775.4,
-  "Total Profit": 900845784.6,
+  "Total Profit": 399155524.6,
   "Top Products by Revenue": {
     "Laptop": 601749814.85,
     "Sofa": 192959827.6,
@@ -30,16 +30,16 @@
     "Shirt": 2202
   },
   "Most Profitable Products": {
-    "Laptop": 361049814.85,
-    "Sofa": 115775827.6,
-    "Phone": 98825823.25,
-    "Refrigerator": 90674832.7,
-    "Dining Table": 72719817.4,
-    "Microwave": 64664823.1,
-    "TV": 62693820.1,
-    "Mixer Grinder": 21203817.7,
-    "Shoes": 11519812.75,
-    "Shirt": 1717395.15
+    "Laptop": 120349814.85,
+    "Sofa": 77183827.6,
+    "Dining Table": 48479817.4,
+    "Refrigerator": 45337332.7,
+    "Phone": 32941823.25,
+    "Microwave": 32332323.1,
+    "TV": 20897820.1,
+    "Mixer Grinder": 10601817.7,
+    "Shoes": 9599812.75,
+    "Shirt": 1431135.15
   },
   "Revenue by Category": {
     "Clothing": 22062247.9,
