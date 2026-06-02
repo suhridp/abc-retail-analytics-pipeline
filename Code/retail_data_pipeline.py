@@ -388,10 +388,36 @@ class DataTransformer:
         df['revenue'] = df['revenue'].clip(lower=0)  # Ensure non-negative
 
         # Profit margin indicator
-        df['cost_per_unit'] = df['price'] * 0.4  # 40% of price
-        df['total_cost'] = df['cost_per_unit'] * df['quantity']
+        # Category-specific cost assumptions
+
+        category_cost_mapping = {
+        'Electronics': 0.80,      # 20% margin
+        'Furniture': 0.60,        # 40% margin
+        'Clothing': 0.50,         # 50% margin
+        'Home Appliances': 0.70   # 30% margin
+        }
+
+        category_col = 'category_prod' if 'category_prod' in df.columns else 'category'
+
+        df['cost_ratio'] = (
+        df[category_col]
+        .map(category_cost_mapping)
+        .fillna(0.60)
+        )
+
+        df['total_cost'] = (
+        df['price']
+        * df['quantity']
+        * df['cost_ratio']
+        )
+
         df['profit'] = df['revenue'] - df['total_cost']
-        
+
+        df['profit_margin_pct'] = np.where(
+        df['revenue'] > 0,
+        (df['profit'] / df['revenue']) * 100,
+        0
+        )
         # Transaction date features for time-based analysis
         df['transaction_year'] = df['transaction_date'].dt.year
         df['transaction_month'] = df['transaction_date'].dt.month
