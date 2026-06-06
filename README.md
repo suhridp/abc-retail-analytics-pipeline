@@ -409,4 +409,4 @@ Potential enhancements include:
 
 ## License
 
-Developed as part of the NeoStats Data Engineering Assessment.
+Developed as part of the Data Engineering Assessment.
