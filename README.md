@@ -390,7 +390,6 @@ python retail_data_pipeline.py \
 Additional project documentation is available in:
 
 - PROJECT_DOCUMENTATION.docx
-- QUICK_START_GUIDE.md
 
 ---
 
